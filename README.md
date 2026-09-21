@@ -4,14 +4,19 @@
 [![LangChain](https://img.shields.io/badge/LangChain-1.x%20%2F%200.3%2B-green.svg)](https://www.langchain.com/)
 [![Model](https://img.shields.io/badge/LLM-Gemini%203.1%20Flash%20Lite-orange.svg)](https://ai.google.dev/)
 [![Database](https://img.shields.io/badge/Database-SQLite3-lightgrey.svg)](https://www.sqlite.org/)
+[![Status](https://img.shields.io/badge/Status-Complete-brightgreen.svg)]()
 
-An **autonomous agentic workflow** built with **LangChain** and **Google Gemini** that dynamically queries student records from a local SQLite database (`students.db`), performs arithmetic calculations, and evaluates university passing rules without hardcoded pipelines.
+> **Day 5 — Agentic AI Track**  
+> An autonomous multi-tool LangChain Agent built with Google Gemini and SQLite that dynamically queries academic records, computes metrics, and determines university passing eligibility without hardcoded chains.
 
 ---
 
-## 📌 Problem Statement
+## 📌 The Problem (What the Mentors Gave Me)
 
-Given a SQLite database containing student information and subject marks, build a LangChain agent powered by Google Gemini that can answer complex academic questions by autonomously selecting, invoking, and chaining the appropriate tools.
+Traditional software relies on fixed sequential chains (e.g. `step1 -> step2 -> step3`). However, real-world user queries are unpredictable:
+- A student might ask for their marks, their department, their average, or a full pass/fail eligibility analysis.
+- The challenge was to build an agent using **LangChain** and **Google Gemini** that **dynamically determines which tools are needed** based purely on natural language input.
+- **Strict Requirement**: No hardcoded sequence. The agent must dynamically chain tools in multi-turn reasoning cycles (e.g. `get_student_info` $\rightarrow$ `get_student_marks` $\rightarrow$ `calculator` $\rightarrow$ `get_passing_rules`) until arriving at the complete answer.
 
 ### 🗄️ Database: `students.db`
 
@@ -27,26 +32,13 @@ The database contains the `students` table populated with the following records:
 
 ---
 
-## 🛠️ The 4 LangChain Tools
+## 💡 My Solution & Architecture (What I Built)
 
-Each tool is implemented using LangChain's `@tool` decorator with strict type annotations and explicit docstrings:
-
-| Tool | Signature | Return Value | Description |
-| :--- | :--- | :--- | :--- |
-| **`get_student_info`** | `(student_id: str)` | `dict` | Returns `name` and `department` for a student. |
-| **`get_student_marks`** | `(student_id: str)` | `dict` | Returns marks in `python`, `database`, `ai`, and `web`. |
-| **`calculator`** | `(expression: str)` | `str` | Safely evaluates math expressions (e.g. `85 + 72 + 90 + 78`, `325 / 4`). |
-| **`get_passing_rules`** | `()` | `dict` | Returns university criteria: Min mark per subject $\ge 35$, Min overall average $\ge 40\%$. |
-
----
-
-## 🧠 Autonomous Agent Architecture
-
-Instead of hardcoding a fixed pipeline (`info -> marks -> calc`), the LLM acts as the decision-maker in an iterative reasoning loop:
+I created an autonomous LangChain agent using `create_tool_calling_agent` and `AgentExecutor` connected to 4 custom LangChain `@tool` functions:
 
 ```mermaid
 flowchart TD
-    UserQuery["User Query"] --> Agent["LangChain Agent (Gemini 3.1 Flash Lite)"]
+    UserQuery["Student Question"] --> Agent["LangChain Agent (Gemini 3.1 Flash Lite)"]
     Agent --> Decide{"Tool Needed?"}
     
     Decide -- "Needs Student Info" --> T1["get_student_info(student_id)"]
@@ -66,6 +58,26 @@ flowchart TD
     ToolResult --> Agent
     Decide -- "All Facts Gathered" --> FinalAnswer["Final Synthesized Answer"]
 ```
+
+---
+
+## 🛠️ What I Used (Tech Stack)
+
+- **Language**: Python 3.10+
+- **Framework**: LangChain (`langchain`, `langchain-core`, `langchain-community`, `langchain-classic`)
+- **LLM Provider**: Google Gemini (`langchain-google-genai` with `gemini-3.1-flash-lite`)
+- **Database**: SQLite3
+- **Network Acceleration**: Windows IPv4 socket optimization (drops latency from 2+ mins to ~13 seconds)
+
+---
+
+## ✨ Features & What I Built
+
+### The 4 Custom LangChain Tools
+1. **`get_student_info(student_id)`**: Returns `name` and `department` from `students.db`.
+2. **`get_student_marks(student_id)`**: Returns subject marks (`python`, `database`, `ai`, `web`).
+3. **`calculator(expression)`**: Safe Python Abstract Syntax Tree (`ast`) evaluator for arithmetic operations (e.g. sums and averages). Prevents arbitrary code execution.
+4. **`get_passing_rules()`**: Returns university criteria (Min subject mark: 35, Min overall average: 40%).
 
 ---
 
@@ -100,7 +112,7 @@ flowchart TD
   3. `calculator({"expression": "(85 + 72 + 90 + 78) / 4"})` $\rightarrow$ `81.25`
 * **Output**:
   > **Yes, student 22CS045 is eligible to pass.**
-  > All individual subject marks (85, 72, 90, 78) exceed the minimum threshold of 35, and the overall average of 81.25% exceeds the required 40%.
+  > All individual subject marks (85, 72, 90, 78) exceed 35, and the overall average of 81.25% exceeds the required 40%.
 
 ### 🏆 5. Challenge Question: Multi-Tool Autonomous Chaining
 > **Query**: *"I am 22CS045. Tell me my name, department, total marks, average marks, and whether I satisfy the university passing requirements."*
@@ -125,40 +137,35 @@ flowchart TD
 
 ## ⚡ Performance Optimization
 
-* **Model Choice**: Configured to use **`gemini-3.1-flash-lite`** (15 RPM limit), avoiding the lower 5 RPM rate limits of standard Flash models.
-* **Windows IPv4 Acceleration**: Python on Windows defaults to IPv6, which can incur 20-second TCP timeouts if unrouted. An IPv4 socket patch is integrated into the script and notebook, dropping connection latency from **2+ minutes to ~13 seconds**.
+* **Model Selection**: Configured to use **`gemini-3.1-flash-lite`** (15 RPM limit), avoiding the strict 5 RPM rate limits of standard Flash models.
+* **Windows IPv4 Acceleration**: Python on Windows defaults to IPv6, which can incur 20-second TCP timeouts if unrouted. An IPv4 socket patch is integrated into the script and notebook, reducing connection latency from **2+ minutes to ~13 seconds**.
 
 ---
 
 ## 🚀 How to Run
 
 ### Option 1: In VS Code (Recommended)
-1. Clone the repository and open it in VS Code:
-   ```bash
-   git clone https://github.com/Prajeeth-12/sodak-day-5.git
-   cd sodak-day-5
-   ```
-2. Create and activate virtual environment:
+1. Open the repository in VS Code.
+2. Activate your virtual environment and install dependencies:
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
    pip install -r requirements.txt
    ```
-3. Create `.env` file with your Gemini API key:
+3. Set your Gemini API key in `.env`:
    ```bash
    echo GEMINI_API_KEY=your_key_here > .env
    ```
-4. Open [`student_academic_agent.ipynb`](student_academic_agent.ipynb) in VS Code, select the `.venv` kernel, and run all cells!
+4. Open [`student_academic_agent.ipynb`](student_academic_agent.ipynb), select the `.venv` kernel, and run all cells!
 
 ### Option 2: In Terminal CLI
-Run the standalone Python script:
 ```bash
 python student_agent.py
 ```
 
 ### Option 3: In Google Colab
 1. Upload [`student_academic_agent.ipynb`](student_academic_agent.ipynb) to [Google Colab](https://colab.research.google.com/).
-2. In Colab's left sidebar, click the **Secrets** icon (🔑) and add `GEMINI_API_KEY`.
+2. Add your `GEMINI_API_KEY` under Colab Secrets (🔑).
 3. Click **Runtime** > **Run all**.
 
 ---

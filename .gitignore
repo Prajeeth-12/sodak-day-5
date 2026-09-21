@@ -1,0 +1,20 @@
+# Environment variables
+.env
+
+# SQLite database
+students.db
+
+# Python cache & artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environment
+.venv/
+env/
+venv/
